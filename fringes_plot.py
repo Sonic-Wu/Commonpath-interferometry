@@ -124,11 +124,18 @@ from scipy.optimize import differential_evolution
 def double_Lorentz(x, a, b, A, w, x_0, A1, w1, x_01):
     return a*x+b+(2*A/np.pi)*(w/(4*(x-x_0)**2 + w**2))+(2*A1/np.pi)*(w1/(4*(x-x_01)**2 + w1**2))
 
+# Lorentzian peak function
+def Lorentz(x, A, w, x_0):
+    return (2*A/np.pi)*(w/(4*(x-x_0)**2 + w**2))
+
+def derivative_Lorentz(x, A, w, x_0):
+    return  16*A*w*(x_0-x)/np.pi/(4*(x-x_0)**2 + w**2)**2
+
 # function for genetic algorithm to minimize (sum of squared error)
 # bounds on parameters are set in generate_Initial_Parameters() below
 def sumOfSquaredError(parameterTuple):
     warnings.filterwarnings("ignore") # do not print warnings by genetic algorithm
-    return np.sum((yynew - double_Lorentz(xxnew, *parameterTuple)) ** 2)
+    return np.sum((yynew - derivative_Lorentz(xxnew, *parameterTuple)) ** 2)
 
 def generate_Initial_Parameters(xData, yData):
     # min and max used for bounds
@@ -138,17 +145,18 @@ def generate_Initial_Parameters(xData, yData):
     minY = min(yData)
     
     parameterBounds = []
-    parameterBounds.append([-1.0, 1.0]) # parameter bounds for a
-    parameterBounds.append([maxY/-2.0, maxY/2.0]) # parameter bounds for b
+    #parameterBounds.append([-1.0, 1.0]) # parameter bounds for a
+    #parameterBounds.append([maxY/-2.0, maxY/2.0]) # parameter bounds for b
     parameterBounds.append([0.0, maxY*100.0]) # parameter bounds for A
     parameterBounds.append([0.0, maxY/2.0]) # parameter bounds for w
     parameterBounds.append([minX, maxX]) # parameter bounds for x_0
-    parameterBounds.append([0.0, maxY*100.0]) # parameter bounds for A1
-    parameterBounds.append([0.0, maxY/2.0]) # parameter bounds for w1
-    parameterBounds.append([minX, maxX]) # parameter bounds for x_01
+    #parameterBounds.append([0.0, maxY*100.0]) # parameter bounds for A1
+    #parameterBounds.append([0.0, maxY/2.0]) # parameter bounds for w1
+    #parameterBounds.append([minX, maxX]) # parameter bounds for x_01
 
     # "seed" the numpy random number generator for repeatable results
     result = differential_evolution(sumOfSquaredError, parameterBounds, seed=3)
+    print(result.fun)
     return result.x
 
 i = 1
@@ -162,12 +170,12 @@ yynew = f(xxnew)
 initialParameters = generate_Initial_Parameters(xxnew,yynew)
 
 # curve fit the test data
-fittedParameters, pcov = curve_fit(double_Lorentz, xxnew, yynew, initialParameters, maxfev = 5000)
+fittedParameters, pcov = curve_fit(derivative_Lorentz, xxnew, yynew, initialParameters, maxfev = 2000)
 
-a, b, A, w, x_0, A1, w1, x_01 = fittedParameters
-y_fit = double_Lorentz(xxnew, a, b, A, w, x_0, A1, w1, x_01)
+A, w, x_0 = fittedParameters
+y_fit = derivative_Lorentz(xxnew, A, w, x_0)
 
-plt.plot(xxnew,yynew,'o', xxnew, y_fit)
+plt.plot(xxnew,yynew,'o', xxnew, y_fit, '.')
 plt.show()
 #%%
 fig,axes = plt.subplots(3,1)
