@@ -131,11 +131,14 @@ def Lorentz(x, A, w, x_0):
 def derivative_Lorentz(x, A, w, x_0):
     return  16*A*w*(x_0-x)/np.pi/(4*(x-x_0)**2 + w**2)**2
 
+def fano_resonance(x, w_0, q, r, t_D, N):
+    return -(np.abs(t_D)**2 * (q + (x - w_0)/r)**2 / (1 + ((x - w_0)/r)**2) - N)
+
 # function for genetic algorithm to minimize (sum of squared error)
 # bounds on parameters are set in generate_Initial_Parameters() below
 def sumOfSquaredError(parameterTuple):
     warnings.filterwarnings("ignore") # do not print warnings by genetic algorithm
-    return np.sum((yynew - derivative_Lorentz(xxnew, *parameterTuple)) ** 2)
+    return np.sum((yynew - fano_resonance(xxnew, *parameterTuple)) ** 2)
 
 def generate_Initial_Parameters(xData, yData):
     # min and max used for bounds
@@ -145,15 +148,22 @@ def generate_Initial_Parameters(xData, yData):
     minY = min(yData)
     
     parameterBounds = []
+    #parameterBounds for the Lorentz function
     #parameterBounds.append([-1.0, 1.0]) # parameter bounds for a
     #parameterBounds.append([maxY/-2.0, maxY/2.0]) # parameter bounds for b
-    parameterBounds.append([0.0, maxY*100.0]) # parameter bounds for A
-    parameterBounds.append([0.0, maxY/2.0]) # parameter bounds for w
-    parameterBounds.append([minX, maxX]) # parameter bounds for x_0
+    #parameterBounds.append([0.0, maxY*100.0]) # parameter bounds for A
+    #parameterBounds.append([0.0, maxY/2.0]) # parameter bounds for w
+    #parameterBounds.append([minX, maxX]) # parameter bounds for x_0
     #parameterBounds.append([0.0, maxY*100.0]) # parameter bounds for A1
     #parameterBounds.append([0.0, maxY/2.0]) # parameter bounds for w1
     #parameterBounds.append([minX, maxX]) # parameter bounds for x_01
 
+    #parameterBounds for the Fano_resonance
+    parameterBounds.append([minX, maxX]) # parameter bounds for w_0
+    parameterBounds.append([0, maxX/2]) # parameter bounds for r
+    parameterBounds.append([0, 5]) # parameter bounds for q
+    parameterBounds.append([0, maxY*100]) # parameter bounds for A
+    parameterBounds.append([0, maxY*10])
     # "seed" the numpy random number generator for repeatable results
     result = differential_evolution(sumOfSquaredError, parameterBounds, seed=3)
     print(result.fun)
@@ -170,12 +180,12 @@ yynew = f(xxnew)
 initialParameters = generate_Initial_Parameters(xxnew,yynew)
 
 # curve fit the test data
-fittedParameters, pcov = curve_fit(derivative_Lorentz, xxnew, yynew, initialParameters, maxfev = 2000)
+fittedParameters, pcov = curve_fit(fano_resonance, xxnew, yynew, initialParameters, maxfev = 2000)
 
-A, w, x_0 = fittedParameters
-y_fit = derivative_Lorentz(xxnew, A, w, x_0)
+w_0, q, r, t_D, N = fittedParameters
+y_fit = fano_resonance(xxnew, w_0, q, r, t_D, N)
 
-plt.plot(xxnew,yynew,'o', xxnew, y_fit, '.')
+plt.plot(xxnew,yynew,'o', xxnew, y_fit)
 plt.show()
 #%%
 fig,axes = plt.subplots(3,1)
